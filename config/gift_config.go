@@ -3,9 +3,14 @@ package config
 /*
 礼物价值
 */
-const (
-	type1 = iota + 1
-	type2
-	type3
-	type4
-)
+var GiftConfigMap map[int]int
+
+func init() {
+	GiftConfigMap = map[int]int{
+		1: 10,
+		2: 20,
+		3: 30,
+		4: 40,
+		5: 50,
+	}
+}

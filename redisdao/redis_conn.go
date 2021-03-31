@@ -1,4 +1,4 @@
-package main
+package redisdao
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func RedisConnect() redis.Conn {
+func connect() redis.Conn {
 	//获取连接
 	connection, err := redis.Dial("tcp", "127.0.0.1:6379")
 	if err != nil {
@@ -15,16 +15,20 @@ func RedisConnect() redis.Conn {
 	return connection
 }
 
+func do(func()) {
+
+}
+
 func main() {
 	//获取c1连接
 	c1, err := redis.Dial("tcp", "127.0.0.1:6379")
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	defer c1.Close()
-	c2, err := redis.DialURL("redis://127.0.0.1:6379")
+	c2, err := redis.DialURL("redisdao://127.0.0.1:6379")
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	defer c2.Close()
 
