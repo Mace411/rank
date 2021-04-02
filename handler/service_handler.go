@@ -3,12 +3,9 @@ package handler
 import (
 	"../base"
 	"../config"
+	"../dao"
 	"../packet"
-	"../redisdao"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,7 +16,7 @@ import (
 */
 
 func errorMsg(desc string, err error, w http.ResponseWriter) {
-	log.Println(err)
+	log.Println(desc, err)
 	w.Write([]byte(desc))
 }
 
@@ -31,72 +28,42 @@ func SendGift(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&gift); err != nil {
 		r.Body.Close()
 		errorMsg(base.ParamError, err, w)
-
+		return
 	}
-	fmt.Printf("sender:%d, receiver:%d, gift:%d\n", gift.Sender, gift.Receiver, gift.GiftType)
+	//fmt.Printf("sender:%d, receiver:%d, gift:%d\n", gift.Sender, gift.Receiver, gift.GiftType)
 	value := config.GiftConfigMap[gift.GiftType]
 	if value <= 0 {
-		// TODO
+		errorMsg(base.ParamError, nil, w)
+		return
 	}
-	var result string
 	//送礼业务
 	//往redis里添加送花记录
-	err := redisdao.AddSendGiftLog(gift)
+	msg, err := dao.AddSendGiftLog(gift)
 	if err != nil {
-		// TODO
+		errorMsg(msg, err, w)
 		return
 	}
 	//往redis里更新排行榜
-	err = redisdao.UpdateRank(gift)
+	msg, err = dao.UpdateRank(gift)
 	if err != nil {
-		//TODO
+		errorMsg(msg, err, w)
 		return
 	}
-	if err := json.NewEncoder(w).Encode(result); err != nil {
+	if err = json.NewEncoder(w).Encode(msg); err != nil {
 		log.Println(err)
 	}
 }
 
 /*
-排行，用get，返回数据用josn
+排行，用get，返回数据用json
 */
 func Rank(w http.ResponseWriter, r *http.Request) {
-	rankValues, err := redisdao.GetRank()
+	rankItems, msg, err := dao.GetRank(1, 2)
 	if err != nil {
-		log.Println("获取排行榜数据失败")
-		//TODO
-	}
-	rankItems, err := createRankItems(rankValues)
-	if err != nil {
-		//TODO
+		errorMsg(msg, err, w)
 		return
 	}
 	json.NewEncoder(w).Encode(rankItems)
-}
-
-/*
-构建排行项
-*/
-func createRankItems(values []interface{}) (rankItems []packet.RankItem, err error) {
-	if len(values)%2 != 0 {
-		return nil, errors.New("expects even number of values result")
-	}
-	rankItems = make([]packet.RankItem, len(values)/2)
-	var index int
-	for i := 0; i < len(values); i += 2 {
-		key, ok := values[i].([]byte)
-		if !ok {
-			return nil, errors.New("redigo: IntMap key not a bulk string value")
-		}
-		value, err := redis.Int(values[i+1], nil)
-		if err != nil {
-			return nil, err
-		}
-		userId, _ := strconv.Atoi(string(key))
-		rankItems[index] = packet.RankItem{Rank: index + 1, UserId: uint64(userId), Value: uint(value)}
-		index++
-	}
-	return rankItems, nil
 }
 
 /*
@@ -106,9 +73,17 @@ func Log(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	receiverId, err := strconv.Atoi(query.Get("receiverId"))
 	if err != nil {
-		log.Println("收礼者id有误")
+		errorMsg(base.ParamError, err, w)
+		return
 	}
-	giftLogs, _ := redisdao.GetGiftLog(uint64(receiverId))
+	giftLogs, msg, err := dao.GetGiftLog(receiverId, 0, -1)
+	if err != nil {
+		errorMsg(msg, err, w)
+		return
+	}
 	giftLogsResp := make([]packet.GiftItem, len(giftLogs))
+	for i, giftLog := range giftLogs {
+		giftLogsResp[i] = packet.GiftItem{Sender: giftLog.Sender, GiftType: giftLog.GiftType, Timestamp: giftLog.Timestamp}
+	}
 	json.NewEncoder(w).Encode(giftLogsResp)
 }

@@ -4,7 +4,13 @@ package base
 提示消息号
 */
 const (
-	ParamError         = "参数错误"
-	ReceiverIdNotFound = "收礼者id有误"
-	SendGiftFailed     = "送礼失败"
+	Success              = "成功"
+	ParamError           = "参数错误"
+	SendGiftFailed       = "送礼失败"
+	GiftTypeNotExist     = "礼物类型不存在"
+	RankUpdateFail       = "排行榜更新失败"
+	RankWriteMongoFail   = "排行榜写进mongo失败"
+	RankReadFail         = "获取排行榜数据失败"
+	GiftLogReadFail      = "获取送礼记录失败"
+	GiftLogLoadRedisFail = "送礼记录加载到redis失败"
 )

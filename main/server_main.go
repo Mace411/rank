@@ -5,16 +5,19 @@ package main
 */
 
 import (
+	"../dao"
 	"../handler"
 	"log"
 	"net/http"
 )
 
 func main() {
+	//加载排行榜到redis
+	dao.LoadRedis()
+	//注册handler
 	http.HandleFunc("/sendGift", handler.SendGift)
 	http.HandleFunc("/rank", handler.Rank)
 	http.HandleFunc("/log", handler.Log)
 	println("启动成功!!!")
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
-	//runtime.GOMAXPROCS(10) //mongo最多10个协程访问
 }
