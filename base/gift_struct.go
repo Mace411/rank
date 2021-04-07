@@ -1,7 +1,6 @@
 package base
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -13,14 +12,6 @@ type Gift struct {
 	Receiver  int
 	GiftType  int
 	Timestamp time.Time
-}
-
-func (g Gift) MarshalBinary() ([]byte, error) {
-	return json.Marshal(g)
-}
-
-func (g Gift) UnmarshalBinary(data []byte) error {
-	return json.Unmarshal(data, g)
 }
 
 /*

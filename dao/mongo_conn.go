@@ -1,7 +1,9 @@
 package dao
 
 import (
+	"fmt"
 	"gopkg.in/mgo.v2"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,38 +18,41 @@ const (
 	maxConnect                   = 10
 )
 
-var globalMgoSession *mgo.Session
+type MongoConn struct {
+	globalMgoSession *mgo.Session
+	sem              int32
+}
 
-/*
-控制mongo的访问数量
-*/
-var sem = make(chan int, maxConnect)
+var mongoConn MongoConn
 
-func session() *mgo.Session {
-	var err error
-	globalMgoSession, err = mgo.DialWithTimeout(url, timeout)
+func session() MongoConn {
+	globalMgoSession, err := mgo.Dial(url)
 	if err != nil {
 		panic(err)
 	}
-	globalMgoSession.SetMode(mgo.Monotonic, true)
-	globalMgoSession.SetPoolLimit(num)
-	return globalMgoSession
+	mongoConn = MongoConn{globalMgoSession: globalMgoSession, sem: 0}
+	return mongoConn
 }
 
 /*
 获取mongo连接
 */
-func connectMongo() *mgo.Session {
-	sem <- 1
-	if globalMgoSession == nil {
-		globalMgoSession = session()
+func connectMongo() (*mgo.Session, error) {
+	if mongoConn.globalMgoSession == nil {
+		mongoConn = session()
 	}
-	return globalMgoSession.Clone()
+	if mongoConn.sem >= maxConnect {
+		return nil, fmt.Errorf("mongo的连接数达到上限")
+	}
+	atomic.AddInt32(&mongoConn.sem, 1)
+	//fmt.Printf("获取之后的值:%d, 时间:%s\n", newInt, time.Now())
+	return mongoConn.globalMgoSession, nil
 }
 
 /*
 用完mongo之后返还
 */
-func Reduce() {
-	<-sem
+func CloseMongo() {
+	atomic.AddInt32(&mongoConn.sem, -1)
+	//fmt.Printf("返还之后的值:%d, 时间:%s\n",newInt, time.Now())
 }

@@ -13,7 +13,7 @@ import (
 
 func main() {
 	//加载排行榜到redis
-	dao.LoadRedis()
+	dao.LoadRankToRedis()
 	//注册handler
 	http.HandleFunc("/sendGift", handler.SendGift)
 	http.HandleFunc("/rank", handler.Rank)

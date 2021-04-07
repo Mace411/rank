@@ -43,6 +43,7 @@ func SendGift(w http.ResponseWriter, r *http.Request) {
 		errorMsg(msg, err, w)
 		return
 	}
+	dao.DelRedisKey(strconv.Itoa(gift.Receiver))
 	//往redis里更新排行榜
 	msg, err = dao.UpdateRank(gift)
 	if err != nil {
@@ -58,7 +59,7 @@ func SendGift(w http.ResponseWriter, r *http.Request) {
 排行，用get，返回数据用json
 */
 func Rank(w http.ResponseWriter, r *http.Request) {
-	rankItems, msg, err := dao.GetRank(1, 2)
+	rankItems, msg, err := dao.GetRank(0, 99)
 	if err != nil {
 		errorMsg(msg, err, w)
 		return
@@ -76,7 +77,7 @@ func Log(w http.ResponseWriter, r *http.Request) {
 		errorMsg(base.ParamError, err, w)
 		return
 	}
-	giftLogs, msg, err := dao.GetGiftLog(receiverId, 0, -1)
+	giftLogs, msg, err := dao.GetGiftLog(receiverId, 0, 99)
 	if err != nil {
 		errorMsg(msg, err, w)
 		return
@@ -85,5 +86,6 @@ func Log(w http.ResponseWriter, r *http.Request) {
 	for i, giftLog := range giftLogs {
 		giftLogsResp[i] = packet.GiftItem{Sender: giftLog.Sender, GiftType: giftLog.GiftType, Timestamp: giftLog.Timestamp}
 	}
+	//TODO 按照时间近到远排序
 	json.NewEncoder(w).Encode(giftLogsResp)
 }
